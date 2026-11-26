@@ -1,0 +1,11 @@
+node_modules/
+contracts/artifacts/
+contracts/cache/
+contracts/typechain-types/
+contracts/coverage/
+dist/
+.env
+.env.*
+!.env.example
+*.log
+.corridor-data/
