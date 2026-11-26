@@ -27,7 +27,7 @@ export class ComplianceAgent {
       findings.push({
         code: "INTENT_EVASION",
         severity: intent.evasionRisk === "high" ? "high" : "medium",
-        detail: intent.evasionIndicators.join("; ") || "evasion intent inferred from memo",
+        detail: intent.evasionIndicators.join("; ") || "no memo indicators; risk raised by the linked-transfer pattern",
       });
     }
 

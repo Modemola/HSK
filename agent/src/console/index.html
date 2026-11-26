@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Corridor Console</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --ink: #14181f; --muted: #5b6573; --line: #e3e7ed;
+    --accent: #1d5bd8; --ok: #13804b; --ok-bg: #e6f4ec; --bad: #b42318; --bad-bg: #fdecea;
+    --warn: #9a6700; --warn-bg: #fff4d6; --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0e1116; --panel: #161b22; --ink: #e6edf3; --muted: #8b96a5; --line: #262d36;
+      --accent: #6ea8ff; --ok: #4ac26b; --ok-bg: #10301c; --bad: #ff7b72; --bad-bg: #3a1414; --warn: #e3b341; --warn-bg: #33270b; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--ink); }
+  header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; padding: 14px 20px; border-bottom: 1px solid var(--line); background: var(--panel); }
+  h1 { font-size: 17px; margin: 0; letter-spacing: .2px; }
+  h1 small { color: var(--muted); font-weight: 400; margin-left: 8px; }
+  .badges { display: flex; flex-wrap: wrap; gap: 6px; }
+  .badge { font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+  .badge.ok { color: var(--ok); background: var(--ok-bg); border-color: transparent; }
+  .badge.warn { color: var(--warn); background: var(--warn-bg); border-color: transparent; }
+  .badge.bad { color: var(--bad); background: var(--bad-bg); border-color: transparent; }
+  main { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 16px; padding: 16px 20px; max-width: 1400px; margin: 0 auto; }
+  @media (max-width: 860px) {
+    main { grid-template-columns: minmax(0, 1fr); padding: 12px 16px; }
+    footer { padding: 0 16px 24px; }
+    footer table td:first-child { white-space: normal; }
+    .timeline li { grid-template-columns: 1fr; gap: 0; }
+    .detail { padding: 14px; }
+  }
+  .detail, .panel { min-width: 0; overflow-wrap: anywhere; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+  .cases { padding: 6px; align-self: start; }
+  .case { padding: 10px 12px; border-radius: 8px; cursor: pointer; border: 1px solid transparent; }
+  .case:hover { background: var(--bg); }
+  .case.active { border-color: var(--accent); }
+  .case .id { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .case .sum { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .detail { padding: 18px; min-width: 0; }
+  .grid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+  @media (max-width: 1100px) { .grid2 { grid-template-columns: minmax(0, 1fr); } }
+  h2 { font-size: 15px; margin: 0 0 4px; }
+  h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin: 18px 0 8px; }
+  .timeline { list-style: none; padding: 0; margin: 0; }
+  .timeline li { display: grid; grid-template-columns: 96px 1fr; gap: 8px; padding: 6px 0; border-bottom: 1px dashed var(--line); }
+  .timeline .t { color: var(--muted); font-size: 12px; font-family: var(--mono); }
+  .finding { padding: 8px 10px; border-radius: 8px; margin-bottom: 6px; background: var(--bg); }
+  .finding.high, .finding.critical { background: var(--bad-bg); }
+  .finding.medium { background: var(--warn-bg); }
+  .finding code { font-weight: 600; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 500; }
+  .mono { font-family: var(--mono); font-size: 12px; word-break: break-all; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  button { font: inherit; padding: 7px 12px; border-radius: 8px; border: 1px solid var(--accent); background: var(--accent); color: #fff; cursor: pointer; }
+  button.secondary { background: transparent; color: var(--accent); }
+  .verify { margin-top: 8px; padding: 10px; border-radius: 8px; background: var(--bg); }
+  .narr { padding: 10px 12px; border-left: 3px solid var(--accent); background: var(--bg); border-radius: 0 8px 8px 0; }
+  pre { background: var(--bg); padding: 10px; border-radius: 8px; overflow: auto; max-height: 360px; font-size: 12px; }
+  .empty { color: var(--muted); padding: 40px; text-align: center; }
+  footer { max-width: 1400px; margin: 0 auto; padding: 0 20px 28px; }
+  footer table td:first-child { width: 40%; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Corridor <small>Compliance console · KR→HK settlement on HSK Chain</small></h1>
+  <div class="badges" id="badges"></div>
+</header>
+<main>
+  <section class="panel cases" id="cases"><div class="empty">Waiting for agent activity…<br/>Run <code>npm run demo</code>.</div></section>
+  <section class="panel detail" id="detail"><div class="empty">Select a case.</div></section>
+</main>
+<footer>
+  <section class="panel detail">
+    <h3 style="margin-top:0">What is real and what is simulated</h3>
+    <table>
+      <tr><th>Layer</th><th>Status</th></tr>
+      <tr><td>CorridorRegistry, CorridorEscrow, EvidenceAnchor</td><td>Real contracts; on HSK Chain mainnet (177) in the submission run, USDC.e at a stated value scale</td></tr>
+      <tr><td>HSP compliant payment, attestations, verifier</td><td id="hspRow">—</td></tr>
+      <tr><td>Compliance rules (structuring, smurfing, Travel-Rule threshold, screening)</td><td>Real code; watch-list is a demo list</td></tr>
+      <tr><td>Memo intent analysis</td><td>Claude when an API key is set, otherwise keyword heuristic (shown per case)</td></tr>
+      <tr><td>KRW collection, HKD payout (FPS), FX rates, operator licences</td><td>Simulated</td></tr>
+      <tr><td>Travel-Rule packet, Korean FX-report record</td><td>Modelled on IVMS101 / BOK reporting items; official VA-transfer schema not yet public</td></tr>
+    </table>
+  </section>
+</footer>
+<script>
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+let meta = null, events = [], selected = null, lastCount = -1;
+
+const STATUS = {
+  "escrow.released": ["SETTLED", "ok"], "escrow.refunded": ["REFUNDED", "warn"],
+  "escrow.locked": ["IN ESCROW", "warn"],
+};
+function caseStatus(evs) {
+  for (const k of ["escrow.released", "escrow.refunded"]) if (evs.some((e) => e.type === k)) return STATUS[k];
+  const c = evs.find((e) => e.type === "compliance.reviewed");
+  if (c && c.decision === "BLOCK") return ["BLOCKED", "bad"];
+  if (evs.some((e) => e.type === "evidence.anchored") && c && c.decision === "HOLD") return ["HELD", "bad"];
+  if (evs.some((e) => e.type === "escrow.locked")) return STATUS["escrow.locked"];
+  return ["PROCESSING", ""];
+}
+const txLink = (h) => meta && meta.explorer ? `<a class="mono" target="_blank" rel="noopener" href="${meta.explorer}/tx/${h}">${h.slice(0, 10)}…${h.slice(-6)}</a>` : `<span class="mono">${h.slice(0, 10)}…</span>`;
+const time = (ms) => new Date(ms).toLocaleTimeString();
+
+function describe(e) {
+  switch (e.type) {
+    case "case.received": return esc(e.summary);
+    case "compliance.reviewed": return `Compliance Agent: <b>${esc(e.decision)}</b> <span class="badge">${esc(e.intentSource)}</span>`;
+    case "quotes.received": return `${e.quotes.length} quotes received from payout operators`;
+    case "payee.rejected": return `<span style="color:var(--bad)">✗ ${esc(e.name)}</span> excluded before payment: missing <code>${esc(e.missing.join(", "))}</code>`;
+    case "quote.selected": return `Selected <b>${esc(e.payoutName)}</b>`;
+    case "hsp.paid": return `HSP compliant payment <span class="mono">${e.paymentId.slice(0, 14)}…</span> (${esc(e.backend)})`;
+    case "hsp.verified": return `${esc(e.by)} verifier: <b style="color:${e.outcome === "ACCEPT" ? "var(--ok)" : "var(--bad)"}">${esc(e.outcome)}</b>`;
+    case "escrow.locked": return `Escrow locked ${Number(e.amount) / 1e6} USDC · ${txLink(e.txHash)}`;
+    case "receipt.anchored": return `Relayer anchored HSP receipt hash · ${txLink(e.txHash)}`;
+    case "payout.delivered": return `HK$${e.amountHkd.toLocaleString()} paid out (${esc(e.bankRef)}, simulated)`;
+    case "escrow.released": return `Escrow released to payout operator · ${txLink(e.txHash)}`;
+    case "escrow.refunded": return `SLA missed: escrow refunded to sender · ${txLink(e.txHash)}`;
+    case "evidence.anchored": return `${esc(e.kind)} evidence pack anchored · ${txLink(e.txHash)}`;
+    default: return esc(e.type);
+  }
+}
+
+function renderBadges() {
+  if (!meta) return;
+  const net = { 177: ["HSK Chain mainnet", "ok"], 133: ["HSK testnet", "warn"] }[meta.chainId] || [`local chain ${meta.chainId}`, "warn"];
+  const hsp = meta.hspBackend === "hsp-coordinator" ? ["HSP Coordinator", "ok"] : ["HSP: local protocol simulator", "warn"];
+  $("#badges").innerHTML = `<span class="badge ${net[1]}">${net[0]}</span><span class="badge ${hsp[1]}">${hsp[0]}</span>` +
+    (meta.valueScale !== 1 ? `<span class="badge warn">on-chain value × ${meta.valueScale}</span>` : "") +
+    `<span class="badge">escrow <span class="mono">${meta.deployment.escrow.slice(0, 8)}…</span></span>`;
+  $("#hspRow").textContent = meta.hspBackend === "hsp-coordinator"
+    ? "Real HSP: organiser's sandbox Coordinator and issuer (testnet)"
+    : "Local protocol simulator (same mandate/receipt/attestation model and subset rule; not HashKey's Coordinator)";
+}
+
+function grouped() {
+  const m = new Map();
+  for (const e of events) { if (!m.has(e.caseId)) m.set(e.caseId, []); m.get(e.caseId).push(e); }
+  return m;
+}
+
+function renderCases() {
+  const g = grouped();
+  if (!g.size) return;
+  if (!selected || !g.has(selected)) selected = [...g.keys()][0];
+  $("#cases").innerHTML = [...g.entries()].map(([id, evs]) => {
+    const [label, cls] = caseStatus(evs);
+    const r = evs.find((e) => e.type === "case.received");
+    return `<div class="case ${id === selected ? "active" : ""}" data-id="${esc(id)}">
+      <div style="display:flex;justify-content:space-between;gap:8px"><span class="id">${esc(id)}</span><span class="badge ${cls}">${label}</span></div>
+      <div class="sum">${esc(r ? r.summary : "")}</div></div>`;
+  }).join("");
+  document.querySelectorAll(".case").forEach((el) => el.onclick = () => { selected = el.dataset.id; renderCases(); renderDetail(); });
+}
+
+async function renderDetail() {
+  const evs = grouped().get(selected) || [];
+  if (!evs.length) return;
+  const packs = evs.filter((e) => e.type === "evidence.anchored");
+  const last = packs[packs.length - 1];
+  const pack = last ? await fetch(`/api/packs/${last.packHash}`).then((r) => r.ok ? r.json() : null) : null;
+  const c = pack ? pack.compliance : null;
+  const [label, cls] = caseStatus(evs);
+  const quotes = pack && pack.quotes.length ? `<h3>Payout auction</h3><table><tr><th>Operator</th><th>Payout</th><th>Fee</th><th>ETA</th><th></th></tr>` +
+    pack.quotes.map((q) => {
+      const rej = pack.rejectedPayees.find((r) => r.payout === q.payout);
+      const sel = pack.selectedQuote && pack.selectedQuote.quoteId === q.quoteId;
+      return `<tr><td>${esc(q.payoutName)}</td><td>HK$${q.payoutAmountHkd.toLocaleString()}</td><td>${q.feeBps} bps</td><td>${q.etaMinutes} min</td>
+        <td>${sel ? '<span class="badge ok">selected</span>' : rej ? `<span class="badge bad">rejected: ${esc(rej.decision.missing.join(", "))}</span>` : ""}</td></tr>`;
+    }).join("") + `</table>` : "";
+  const hsp = pack && pack.hsp ? `<h3>HSP verification</h3><table>
+      <tr><td>Payment id (mandate hash)</td><td class="mono">${pack.hsp.paymentId}</td></tr>
+      <tr><td>Backend</td><td>${esc(pack.hsp.backend)}</td></tr>
+      <tr><td>Required</td><td class="mono">${esc((pack.hsp.verifierDecision?.required || pack.hsp.mandate.requiredCapabilities).join(", "))}</td></tr>
+      <tr><td>Satisfied</td><td class="mono">${esc((pack.hsp.verifierDecision?.satisfied || []).join(", "))}</td></tr>
+      <tr><td>Outcome</td><td><b>${esc(pack.hsp.verifierDecision?.outcomeClass || "—")}</b></td></tr>
+      <tr><td>Attestations</td><td>${pack.hsp.attestations.map((a) => `<div class="mono">${esc(a.capability)} → ${a.subject.slice(0, 10)}…</div>`).join("")}</td></tr></table>` : "";
+  $("#detail").innerHTML = `
+    <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap"><div><h2>${esc(selected)}</h2>
+      <div style="color:var(--muted)">${esc((evs.find((e) => e.type === "case.received") || {}).summary || "")}</div></div>
+      <span class="badge ${cls}" style="align-self:flex-start">${label}</span></div>
+    <div class="grid2"><div>
+      <h3>Agent timeline</h3><ul class="timeline">${evs.map((e) => `<li><span class="t">${time(e.at)}</span><span>${describe(e)}</span></li>`).join("")}</ul>
+      ${quotes}${hsp}
+    </div><div>
+      ${c ? `<h3>Compliance decision</h3><div style="margin-bottom:8px"><b>${esc(c.decision)}</b> · HK$${c.amountHkd.toLocaleString()} · window aggregate HK$${c.aggregateHkdInWindow.toLocaleString()}</div>
+        ${c.findings.map((f) => `<div class="finding ${f.severity}"><code>${esc(f.code)}</code> ${esc(f.detail)}</div>`).join("") || '<div class="finding">No findings.</div>'}
+        ${c.remediation ? `<div class="finding medium"><b>Action:</b> ${esc(c.remediation)}</div>` : ""}
+        <h3>Analyst narrative <span class="badge">${esc(c.intent.source === "llm" ? "Claude" : "heuristic")}</span></h3><div class="narr">${esc(c.intent.narrative)}</div>` : ""}
+      ${last ? `<h3>Evidence pack</h3><div class="mono">${last.packHash}</div>
+        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap"><button id="verifyBtn">Re-verify against HSK Chain</button><button class="secondary" id="rawBtn">Show pack</button></div>
+        <div id="verifyOut"></div><pre id="raw" hidden></pre>` : ""}
+    </div></div>`;
+  if (last) {
+    $("#verifyBtn").onclick = async () => {
+      $("#verifyOut").innerHTML = '<div class="verify">Re-hashing pack and reading EvidenceAnchor…</div>';
+      const v = await fetch(`/api/verify/${last.packHash}`).then((r) => r.json());
+      $("#verifyOut").innerHTML = `<div class="verify">
+        <div>${v.hashMatches ? "✅" : "❌"} keccak256(pack) recomputed: <span class="mono">${esc(v.recomputed)}</span></div>
+        <div>${v.anchored ? "✅ anchored on chain" : v.anchored === false ? "❌ not anchored" : "⚠️ chain unreachable: " + esc(v.error)} · <span class="mono">EvidenceAnchor ${meta.deployment.evidenceAnchor.slice(0, 10)}…</span></div></div>`;
+    };
+    $("#rawBtn").onclick = () => { const r = $("#raw"); r.hidden = !r.hidden; r.textContent = JSON.stringify(pack, null, 2); };
+  }
+}
+
+async function tick() {
+  try {
+    meta = await fetch("/api/meta").then((r) => r.json());
+    events = await fetch("/api/events").then((r) => r.json());
+    renderBadges();
+    if (events.length !== lastCount) { lastCount = events.length; renderCases(); await renderDetail(); }
+  } catch (e) { /* server restarting */ }
+}
+tick();
+setInterval(tick, 1500);
+</script>
+</body>
+</html>

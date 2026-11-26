@@ -5,7 +5,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test test/*.test.ts",
-    "demo": "tsx src/demo/run.ts"
+    "demo": "tsx src/demo/run.ts",
+    "console": "tsx src/console/server.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.14.0",
